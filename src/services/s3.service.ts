@@ -1,4 +1,4 @@
-import { CreateBucketCommand, DeleteObjectCommand, GetObjectCommand, ListBucketsCommand, ListObjectsV2Command, PutObjectCommand } from "@aws-sdk/client-s3";
+import { CreateBucketCommand, DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, ListBucketsCommand, ListObjectsV2Command, PutObjectCommand } from "@aws-sdk/client-s3";
 import { s3Client } from "../config/aws";
 
 
@@ -15,14 +15,22 @@ export async function listBuckets() {
     return response.Buckets ?? [];
 }
 
-export async function uploadObject(bucketName: string, key: string, body: string | Buffer, contentType?: string) {
+export async function uploadObject(
+    bucketName: string,
+    key: string,
+    body: string | Buffer,
+    contentType?: string,
+    metadata?: Record<string, string>
+) {
     const command = new PutObjectCommand({
         Bucket: bucketName,
         Key: key,
         Body: body,
-        ContentType: contentType
-    })
-    return await s3Client.send(command)
+        ContentType: contentType,
+        Metadata: metadata
+    });
+
+    return await s3Client.send(command);
 }
 
 export async function listObjects(bucketName: string) {
@@ -41,5 +49,17 @@ export async function getObject(bucketName: string, key: string) {
 
 export async function deleteObject(bucketName: string, key: string) {
     const command = new DeleteObjectCommand({ Bucket: bucketName, Key: key })
+    return await s3Client.send(command);
+}
+
+export async function headObject(
+    bucketName: string,
+    key: string
+) {
+    const command = new HeadObjectCommand({
+        Bucket: bucketName,
+        Key: key
+    });
+
     return await s3Client.send(command);
 }

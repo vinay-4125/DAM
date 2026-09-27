@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { getObject, listObjects, uploadObject } from "../services/s3.service";
 import { v4 as uuidv4 } from "uuid"
+import { generateUploadUrl } from "../services/s3-presigned.service";
 
 
 export async function createAsset(req: Request, res: Response) {
@@ -114,7 +115,10 @@ export async function uploadAsset(req: Request, res: Response) {
 
         const assetId = uuidv4();
         const s3Key = `assets/${assetId}/${req.file.originalname}`
-        await uploadObject(bucketName, s3Key, req.file.buffer, req.file.mimetype)
+        await uploadObject(bucketName, s3Key, req.file.buffer, req.file.mimetype, {
+            assetId,
+            originalName: req.file.originalname
+        })
 
         return res.status(201).json({
             message: "Asset uploaded successfully",
@@ -127,6 +131,38 @@ export async function uploadAsset(req: Request, res: Response) {
         console.error("Upload asset error:", error);
         return res.status(500).json({
             message: "Failed to upload asset"
+        })
+    }
+}
+
+export async function getUploadUrl(req: Request, res: Response) {
+    try {
+        const { fileName, contentType } = req.body;
+        if (!fileName || !contentType) {
+            return res.status(400).json({
+                message: "filename and contentType are required"
+            })
+        }
+
+        const bucketName = process.env.S3_BUCKET_NAME;
+        if (!bucketName) {
+            return res.status(500).json({
+                message: "S3 bucket is not configured"
+            })
+        }
+
+        const assetId = crypto.randomUUID();
+        const key = `assets/${assetId}/${fileName}`
+        const uploadUrl = await generateUploadUrl(bucketName, key, contentType)
+        return res.status(200).json({
+            assetId,
+            key,
+            uploadUrl
+        })
+    } catch (error) {
+        console.error("Generate upload URL error:", error)
+        return res.status(500).json({
+            message: "Failed to generate upload URL"
         })
     }
 }
