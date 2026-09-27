@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { getObject, listObjects, uploadObject } from "../services/s3.service";
 import { v4 as uuidv4 } from "uuid"
 import { generateUploadUrl } from "../services/s3-presigned.service";
+import { generateDownloadUrl } from "../services/s3-presigned.service.js";
 
 
 export async function createAsset(req: Request, res: Response) {
@@ -163,6 +164,32 @@ export async function getUploadUrl(req: Request, res: Response) {
         console.error("Generate upload URL error:", error)
         return res.status(500).json({
             message: "Failed to generate upload URL"
+        })
+    }
+}
+
+export async function getDownloadUrl(req: Request, res: Response) {
+    try {
+        const { key } = req.body;
+        if (!key) {
+            return res.status(400).json({
+                message: "key is required"
+            })
+        }
+
+        const bucketName = process.env.S3_BUCKET_NAME;
+        if (!bucketName) {
+            return res.status(500).json({
+                message: "S3 bucket is not configured"
+            })
+        }
+
+        const downloadUrl = await generateDownloadUrl(bucketName, key)
+        return res.status(200).json({ downloadUrl })
+    } catch (error) {
+        console.error("Generate download URL error:", error);
+        return res.status(500).json({
+            message: "Failed to generate download URL"
         })
     }
 }
